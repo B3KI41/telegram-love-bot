@@ -103,7 +103,7 @@ async def send_question(query, user_id):
 
     q = questions[index]
     if "question" in q:
-await query.message.reply_text(q["question"], reply_markup=get_question_markup(index))
+        await query.message.reply_text(q["question"], reply_markup=get_question_markup(index))
     elif q.get("type") == "riddle":
         if "photo_url" in q:
             await query.message.reply_photo(photo=q["photo_url"], caption=q["text"])

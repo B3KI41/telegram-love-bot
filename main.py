@@ -112,7 +112,7 @@ async def send_question(query, user_id):
         user_states[user_id] += 1
         await send_question(query, user_id)
 
-if name == '__main__':
+if __name__ == '__main__':
     from telegram.ext import ApplicationBuilder
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))

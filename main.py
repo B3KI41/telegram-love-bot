@@ -127,10 +127,7 @@ def handle_answer(call: CallbackQuery):
         after = q["after"]
         if after["type"] == "text":
             bot.send_message(chat_id, after["content"])
-        elif
-
-
-r["type"] == "media":
+elif after["type"] == "media":
             if after["media_type"] == "photo":
                 bot.send_photo(chat_id, after["content"])
 

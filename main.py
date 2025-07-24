@@ -8,7 +8,7 @@ bot = telebot.TeleBot(API_TOKEN)
 
 user_states = {}
 
-# Вопросы — добавляй сколько хочешь
+# ===== ВОПРОСЫ + ЗАГАДКА =====
 questions = [
     {
         "text": "📍 Вопрос 1:\nГде была наша первая встреча?",
@@ -17,40 +17,36 @@ questions = [
         "after": None
     },
     {
-        "text": "📍 Вопрос 2:\nЧто я тебе подарил в тот день?",
-        "options": ["Браслет", "Письмо", "Объятие"],
-        "correct": "Объятие",
-        "after": {
-            "type": "text",
-            "content": "💌 Это было просто объятие, но с огромной теплотой. Я помню это до сих пор."
-        }
+        "text": "📍 Вопрос 2:\nЧто ты делала, когда впервые пришла ко мне домой?",
+        "options": ["Открыла холодильник", "Трогала мою голову", "Смотрела телек"],
+        "correct": "Трогала мою голову",
+        "after": None
     },
     {
-        "text": "📍 Вопрос 3:\nЧто я чувствую, когда ты рядом?",
-        "options": ["Спокойствие", "Волнение", "Всё сразу"],
-        "correct": "Всё сразу",
+        "text": "📍 Вопрос 3:\nНаше первое совместное мероприятие?",
+        "options": ["Свадьба", "Просто посиделка", "День Рождения"],
+        "correct": "День Рождения",
+        "after": None
+    },
+    {
+        "text": "🧩 Загадка #1:\nЯ не человек и не вещь, но я грею нас даже в тишине...\nЧто это?",
+        "options": ["Любовь", "Кошка", "Одеяло"],
+        "correct": "Любовь",
+        "type": "puzzle",
         "after": {
             "type": "media",
             "media_type": "photo",
-            "content": "https://telegra.ph/file/your_image_link.jpg"
+            "content": "https://raw.githubusercontent.com/B3KI41/telegram-love-bot/main/love_photo_1.png",
+            "caption": (
+                "❤️ Это действительно была любовь. Самая настоящая.\n"
+                "Спасибо, что чувствуешь это вместе со мной.\n\n"
+                "📸 И вот одно из тех мгновений, где эта любовь была в каждом взгляде…"
+            )
         }
     }
 ]
 
-# Сюрпризы между блоками — будут вставляться после каждого N вопросов
-surprise_blocks = {
-    3: {
-        "type": "text",
-        "content": "🎁 Маленький бонус за первые 3 вопроса: ты — невероятная. Спасибо, что ты есть 💜"
-    },
-    6: {
-        "type": "media",
-        "media_type": "photo",
-        "content": "https://telegra.ph/file/another_surprise.jpg"
-    }
-}
-
-# ========== Старт ==========
+# ========== СТАРТ ==========
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
@@ -66,7 +62,7 @@ def start_keyboard():
     markup.add(InlineKeyboardButton("🚀 Поехали!", callback_data="start_test"))
     return markup
 
-# ========== Вопросы ==========
+# ========== ВОПРОСЫ ==========
 
 def send_question(chat_id, step):
     q = questions[step]
@@ -79,19 +75,7 @@ def send_question(chat_id, step):
         markup.add(InlineKeyboardButton("⬅️ Назад", callback_data="go_back"))
     bot.send_message(chat_id, q["text"], reply_markup=markup)
 
-def send_surprise(chat_id, step):
-    surprise = surprise_blocks.get(step)
-    if not surprise:
-        return
-    if surprise["type"] == "text":
-        bot.send_message(chat_id, surprise["content"])
-    elif surprise["type"] == "media":
-        if surprise["media_type"] == "photo":
-            bot.send_photo(chat_id, surprise["content"])
-        elif surprise["media_type"] == "video":
-            bot.send_video(chat_id, surprise["content"])
-
-# ========== Ответы ==========
+# ========== ОТВЕТЫ ==========
 
 @bot.callback_query_handler(func=lambda call: call.data == "start_test")
 def handle_start_test(call: CallbackQuery):
@@ -115,7 +99,6 @@ def handle_answer(call: CallbackQuery):
     # очистить inline-кнопки
     bot.edit_message_reply_markup(chat_id=chat_id, message_id=call.message.message_id, reply_markup=None)
 
-    # обработка ответа
     state["history"].append(step)
     if selected == q["correct"]:
         state["score"] += 1
@@ -129,14 +112,11 @@ def handle_answer(call: CallbackQuery):
             bot.send_message(chat_id, after["content"])
         elif after["type"] == "media":
             if after["media_type"] == "photo":
-                bot.send_photo(chat_id, after["content"])
+                bot.send_photo(chat_id, after["content"], caption=after.get("caption", ""))
+            elif after["media_type"] == "video":
+                bot.send_video(chat_id, after["content"])
 
-    # сюрпризный блок
-    send_surprise(chat_id, step + 1)
-
-    # следующий вопрос
     state["step"] += 1
-
     if state["step"] < len(questions):
         send_question(chat_id, state["step"])
     else:
@@ -146,17 +126,13 @@ def handle_answer(call: CallbackQuery):
         )
         bot.send_message(
             chat_id,
-            "🎁 Вот твой финальный сюрприз: https://t.me/your_gift_link"
-        )
-        bot.send_message(
-            chat_id,
-            "Хочешь пройти ещё раз?",
+            "🎁 Хочешь пройти тест ещё раз?",
             reply_markup=InlineKeyboardMarkup().add(
                 InlineKeyboardButton("🔁 Начать заново", callback_data="start_test")
             )
         )
 
-# ========== Назад ==========
+# ========== НАЗАД ==========
 
 @bot.callback_query_handler(func=lambda call: call.data == "go_back")
 def go_back(call: CallbackQuery):
@@ -171,7 +147,7 @@ def go_back(call: CallbackQuery):
     else:
         bot.send_message(chat_id, "Это был самый первый вопрос 🥺")
 
-# ========== Запуск ==========
+# ========== ЗАПУСК ==========
 
 print("Бот запущен...")
 while True:

@@ -1,122 +1,120 @@
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, InputMediaPhoto, InputMediaVideo
+from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler
 
-import logging
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler
+TOKEN = 'YOUR_BOT_TOKEN'
 
-TOKEN = "YOUR_BOT_TOKEN"  # Замените на ваш токен
-
-# Вопросы и загадки
 questions = [
     {
-        "question": "1. Когда была наша первая встреча?",
-        "options": ["15 июня", "30 мая", "22 июля"],
-        "correct_option": 0
+        "question": "Наша первая встреча?",
+        "options": ["Твой подъезд", "Университет", "Кафе"],
+        "correct": 0
     },
     {
-        "question": "2. Что ты делала, когда впервые пришла ко мне домой?",
-        "options": ["Трогала мою голову", "Открыла холодильник", "Смотрела телевизор"],
-        "correct_option": 0
+        "question": "Что ты делала, когда пришла впервые ко мне домой?",
+        "options": ["Трогала мою голову", "Смотрела телевизор", "Ела пельмени"],
+        "correct": 0
     },
     {
-        "question": "3. Первое наше совместное мероприятие?",
+        "question": "Первое наше совместное мероприятие?",
         "options": ["День Рождение", "Свадьба", "Просто посиделка"],
-        "correct_option": 0
+        "correct": 0
     },
     {
-        "type": "puzzle",
-        "question": "❤️ Загадка про любовь",
-        "text": "Оно без слов, но говорит. Без рук — но греет. Без вида — но видно. Что это?",
-        "answer": "Любовь",
-        "image": "https://raw.githubusercontent.com/B3KI41/telegram-love-bot/main/love_photo_1.png"
+        "type": "riddle",
+        "text": "💌 Маленькая загадка:\n\nО чём-то важном не забудь —\nТвоя поддержка — мой маршрут.\nПлечо моё — не на словах,\nТы можешь положиться, как тогда… ❤️",
+        "photo_url": "https://raw.githubusercontent.com/B3KI41/telegram-love-bot/main/love_photo_1.png"
     },
     {
-        "question": "4. Первый мой подарок для тебя, который я никогда больше никому не дарил?",
-        "options": ["Цветы (51 роза)", "Хромосомы (47)", "Деньги (35 тысяч)"],
-        "correct_option": 0
+        "question": "Первый мой подарок для тебя, который я никому не дарил ни до, ни после?",
+        "options": ["Цветы (51 Роза)", "Хромосомы (47)", "Деньги (35 тысяч)"],
+        "correct": 0
     },
     {
-        "question": "5. Мой первый бизнес на Ozon был связан с…",
+        "question": "Мой первый бизнес на Ozon был связан с…?",
         "options": ["Наборы сладостей", "Игрушки", "Напитки"],
-        "correct_option": 0
+        "correct": 0
     },
     {
-        "question": "6. Когда ты лежала в больнице, тебе нравилось наблюдать за…",
-        "options": ["Раствором марганца", "Клизмой", "Осмотром горла"],
-        "correct_option": 0
+        "question": "Когда ты попала в больницу, за каким процессом ты любила наблюдать?",
+        "options": ["Раствор марганца", "Клизма", "Осмотр горла"],
+        "correct": 0
     },
-
     {
-        "type": "puzzle",
-        "question": "🤍 Загадка о поддержке",
-        "text": "Я не герой, не волшебник и не спасатель. Но даже в моменты, когда ты одна, я рядом. Был, есть и буду плечом — всегда. За что ты можешь быть спокойна?",
-        "answer": "Поддержка",
-        "video": "https://raw.githubusercontent.com/B3KI41/telegram-love-bot/main/hospital_circle.mov"
+        "type": "riddle",
+        "text": "✨ Иногда ты болела, иногда грустила, но ты всегда знала — я рядом. И даже когда было тяжело, я топил за тебя всем сердцем.\n\nТы не одна — никогда. ❤️",
+        "video_url": "https://raw.githubusercontent.com/B3KI41/telegram-love-bot/main/hospital_circle.mov"
     }
 ]
 
-# Состояние пользователя
-user_state = {}
+user_states = {}
+
+def get_question_markup(index):
+    question = questions[index]
+    buttons = [
+        [InlineKeyboardButton(text=opt, callback_data=f"answer:{index}:{i}")]
+        for i, opt in enumerate(question["options"])
+    ]
+    if index > 0:
+        buttons.append([InlineKeyboardButton("⬅️ Назад", callback_data="back")])
+    buttons.append([InlineKeyboardButton("🔁 Начать заново", callback_data="restart")])
+    return InlineKeyboardMarkup(buttons)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_state[update.effective_user.id] = {"q": 0}
-    await send_question(update, context)
-
-def get_keyboard(q_index):
-    q = questions[q_index]
-    if "options" in q:
-        keyboard = [[InlineKeyboardButton(opt, callback_data=f"answer:{i}")] for i, opt in enumerate(q["options"])]
-    else:
-        keyboard = [[InlineKeyboardButton("🔁 Начать заново", callback_data="restart")]]
-    if q_index > 0:
-        keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back")])
-    return InlineKeyboardMarkup(keyboard)
-
-async def send_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    state = user_state.get(user_id, {"q": 0})
-    q_index = state["q"]
-    q = questions[q_index]
+    user_states[user_id] = 0
+    await update.message.reply_text(
+        "💘 Готова пройти нашу историю заново?\n\nЖми «Поехали»!",
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Поехали!", callback_data="start")]])
+    )
 
-    if "options" in q:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=q["question"], reply_markup=get_keyboard(q_index))
-    elif q.get("type") == "puzzle":
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=q["text"])
-        if "image" in q:
-            await context.bot.send_photo(chat_id=update.effective_chat.id, photo=q["image"])
-        elif "video" in q:
-            await context.bot.send_video(chat_id=update.effective_chat.id, video=q["video"])
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="🔁 Начать заново", reply_markup=get_keyboard(q_index))
-
-async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     user_id = query.from_user.id
-    data = query.data
-    state = user_state.get(user_id, {"q": 0})
 
-    if data.startswith("answer:"):
-        selected = int(data.split(":")[1])
-        current_q = questions[state["q"]]
-        correct = current_q["correct_option"]
-        if selected == correct:
-            await query.edit_message_text(f"✅ Правильно: {current_q['options'][correct]}")
-        else:
-            await query.edit_message_text(f"❌ Неправильно. Правильный ответ: {current_q['options'][correct]}")
-        state["q"] += 1
-        user_state[user_id] = state
-        if state["q"] < len(questions):
-            await send_question(update, context)
-    elif data == "back":
-        if state["q"] > 0:
-            state["q"] -= 1
-            await send_question(update, context)
-    elif data == "restart":
-        state["q"] = 0
-        await send_question(update, context)
+    if query.data == "start":
+        user_states[user_id] = 0
+        await send_question(query, user_id)
 
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
+    elif query.data == "restart":
+        user_states[user_id] = 0
+        await query.message.reply_text("🔁 Начинаем заново!")
+        await send_question(query, user_id)
+
+    elif query.data == "back":
+        user_states[user_id] = max(user_states[user_id] - 1, 0)
+        await send_question(query, user_id)
+
+    elif query.data.startswith("answer"):
+        _, q_index, a_index = query.data.split(":")
+        q_index, a_index = int(q_index), int(a_index)
+        correct = questions[q_index]["correct"]
+        result = "✅ Верно!" if a_index == correct else "❌ Не совсем..."
+        await query.message.reply_text(result)
+
+        user_states[user_id] += 1
+        await send_question(query, user_id)
+
+async def send_question(query, user_id):
+    index = user_states[user_id]
+    if index >= len(questions):
+        await query.message.reply_text("🏁 Это был конец этой части! Хочешь начать сначала? 🔁", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔁 Начать заново", callback_data="restart")]]))
+        return
+
+    q = questions[index]
+    if "question" in q:
+await query.message.reply_text(q["question"], reply_markup=get_question_markup(index))
+    elif q.get("type") == "riddle":
+        if "photo_url" in q:
+            await query.message.reply_photo(photo=q["photo_url"], caption=q["text"])
+        elif "video_url" in q:
+            await query.message.reply_video(video=q["video_url"], caption=q["text"])
+        user_states[user_id] += 1
+        await send_question(query, user_id)
+
+if name == '__main__':
+    from telegram.ext import ApplicationBuilder
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(handle_button))
+    app.add_handler(CallbackQueryHandler(button))
     app.run_polling()

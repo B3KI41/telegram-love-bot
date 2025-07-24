@@ -6,7 +6,7 @@ TOKEN = 'YOUR_BOT_TOKEN'
 questions = [
     {
         "question": "Наша первая встреча?",
-        "options": ["Твой подъезд", "Университет", "Кафе"],
+        "options": ["Твой подъезд", "Дома", "Кафе"],
         "correct": 0
     },
     {

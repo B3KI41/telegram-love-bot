@@ -1,121 +1,137 @@
 import logging
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, InputMediaPhoto, InputMediaVideo
 from telegram.ext import (
-    ApplicationBuilder, CallbackQueryHandler, CommandHandler,
-    ContextTypes, MessageHandler, filters
+    ApplicationBuilder,
+    CommandHandler,
+    CallbackQueryHandler,
+    ContextTypes,
+    ConversationHandler,
 )
+
+logging.basicConfig(level=logging.INFO)
 
 # Вопросы и ответы
 QUESTIONS = [
     {
         "question": "Наша первая встреча?",
-        "options": ["Твой подъезд", "Парк", "Универ"],
-        "answer": "Твой подъезд"
+        "options": ["Твой подъезд", "Кафе в центре", "Магазин одежды"],
+        "correct": "Твой подъезд"
     },
     {
         "question": "Что ты делала, когда впервые пришла ко мне домой?",
-        "options": ["Трогала мою голову", "Смотрела телек", "Ругалась"],
-        "answer": "Трогала мою голову"
+        "options": ["Трогала мою голову", "Смотрела телевизор", "Заснула сразу"],
+        "correct": "Трогала мою голову"
     },
     {
         "question": "Первое наше совместное мероприятие?",
-        "options": ["День Рождения", "Свадьба", "Посиделка"],
-        "answer": "День Рождения"
+        "options": ["День Рождение", "Свадьба", "Просто посиделка"],
+        "correct": "День Рождение"
     },
     {
         "question": "Первый мой подарок для тебя, который я никому больше не дарил?",
-        "options": ["Цветы (51 роза)", "Хромосомы (47)", "Деньги (35 тыс)"],
-        "answer": "Цветы (51 роза)"
+        "options": ["Цветы (51 роза)", "Хромосомы (47)", "Деньги (35 тысяч)"],
+        "correct": "Цветы (51 роза)"
     },
     {
-        "question": "Мой первый бизнес на Озоне был связан с...",
+        "question": "Мой первый бизнес на Озоне с чем был связан?",
         "options": ["Наборы сладостей", "Игрушки", "Напитки"],
-        "answer": "Наборы сладостей"
+        "correct": "Наборы сладостей"
     },
     {
-        "question": "Когда ты попала в больницу, тебе нравилось наблюдать за...",
-        "options": ["Раствором марганца", "Клизмой", "Осмотром горла"],
-        "answer": "Раствором марганца"
-    },
+        "question": "Когда ты была в больнице, за чем любила наблюдать?",
+        "options": ["Раствор марганца", "Клизма", "Осмотр горла"],
+        "correct": "Раствор марганца"
+    }
 ]
 
-PHOTO_URL = "https://raw.githubusercontent.com/B3KI41/telegram-love-bot/main/love_photo_1.png"
-VIDEO_URL = "https://raw.githubusercontent.com/B3KI41/telegram-love-bot/main/hospital_circle.mov"
+# Загадки
+RIDDLES = {
+    3: {
+        "text": "Загадка про любовь: \n\nЭто чувство между строк,\nЧто растёт с каждым деньком.\nНезаметно, но всерьёз,\nТы и я — и нет угроз 💞",
+        "image": "love_photo_1.png"
+    },
+    6: {
+        "text": "Ты всегда можешь положиться на меня. Даже когда всё только начиналось и чувства были ещё не такими сильными, я уже был рядом. И буду всегда. Навсегда.",
+        "video": "hospital_circle.mov"
+    }
+}
 
-user_state = {}
+STATE = {"index": 0, "history": []}
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-def get_keyboard(options):
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton(text=opt, callback_data=opt)] for opt in options
-    ] + [
-        [InlineKeyboardButton("⬅️ Назад", callback_data="back")],
-        [InlineKeyboardButton("🔁 Начать заново", callback_data="restart")]
-    ])
+def get_keyboard(index):
+    q = QUESTIONS[index]
+    keyboard = [[InlineKeyboardButton(opt, callback_data=opt)] for opt in q["options"]]
+    if index > 0:
+        keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back")])
+    keyboard.append([InlineKeyboardButton("🔁 Начать заново", callback_data="restart")])
+    return InlineKeyboardMarkup(keyboard)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    user_state[user_id] = {"index": 0, "answers": []}
-    await update.message.reply_text("❤️ Привет! Давай проверим, насколько хорошо мы знаем друг друга!\n\nЖми «Поехали»!", reply_markup=InlineKeyboardMarkup([
-        [InlineKeyboardButton("🚀 Поехали", callback_data="start_quiz")]
-    ]))
+    STATE["index"] = 0
+    STATE["history"] = []
+    await update.message.reply_text("🌸 Привет, любимая! Давай посмотрим, насколько хорошо мы знаем друг друга 😊\n\nГотова?", reply_markup=InlineKeyboardMarkup(
+        [[InlineKeyboardButton("Поехали!", callback_data="start")]]
+    ))
 
-async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    user_id = query.from_user.id
+
     data = query.data
 
-    if data == "restart":
-        user_state[user_id] = {"index": 0, "answers": []}
-        await query.message.reply_text("🔁 Всё по новой! Жми «Поехали»", reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🚀 Поехали", callback_data="start_quiz")]
-        ]))
+    if data == "start":
+        STATE["index"] = 0
+        STATE["history"] = []
+        q = QUESTIONS[STATE["index"]]
+        await query.message.reply_text(q["question"], reply_markup=get_keyboard(STATE["index"]))
         return
 
-    if data == "start_quiz":
-        await send_question(query, context, user_id)
+    if data == "restart":
+        STATE["index"] = 0
+        STATE["history"] = []
+        await query.message.reply_text("🔁 Начинаем сначала!")
+        q = QUESTIONS[STATE["index"]]
+        await query.message.reply_text(q["question"], reply_markup=get_keyboard(STATE["index"]))
         return
 
     if data == "back":
-        if user_state[user_id]["index"] > 0:
-            user_state[user_id]["index"] -= 1
-        await send_question(query, context, user_id)
+        if STATE["index"] > 0:
+            STATE["index"] -= 1
+            STATE["history"].pop()
+        q = QUESTIONS[STATE["index"]]
+        await query.message.reply_text(q["question"], reply_markup=get_keyboard(STATE["index"]))
         return
 
-    # Сохранение ответа
-    index = user_state[user_id]["index"]
-    user_state[user_id]["answers"].append(data)
-    user_state[user_id]["index"] += 1
+    current_q = QUESTIONS[STATE["index"]]
+    STATE["history"].append({"question": current_q["question"], "answer": data})
 
-    if user_state[user_id]["index"] == 3:
-        await query.message.reply_photo(PHOTO_URL, caption="🪄 Загадка:\nЧто бы ни случилось, знай — моё плечо всегда рядом, даже если нам сложно. Ты можешь положиться на меня всегда.")
-        await send_question(query, context, user_id)
-    elif user_state[user_id]["index"] == 6:
-        await query.message.reply_video(VIDEO_URL, caption="🌀 Помнишь это видео?.. Это навсегда осталось в моём сердце.\nЗагадка: За что бы ты меня ни винила, я всё равно всегда буду рядом.")
-        await send_question(query, context, user_id)
-    elif user_state[user_id]["index"] < len(QUESTIONS):
-        await send_question(query, context, user_id)
+    if data == current_q["correct"]:
+        await query.message.reply_text("✅ Верно!")
     else:
-        await query.message.reply_text("💖 Это было потрясающе! Ты прошла все вопросы. Дальше будет ещё интереснее!")
+        await query.message.reply_text(f"❌ Неа. Правильный ответ: {current_q['correct']}")
 
-async def send_question(query, context, user_id):
-    index = user_state[user_id]["index"]
-    q = QUESTIONS[index]
-    text = f"{index+1}. {q['question']}"
-    await query.message.reply_text(text, reply_markup=get_keyboard(q["options"]))
+    STATE["index"] += 1
 
-def main():
-    from os import getenv
-    TOKEN = getenv("BOT_TOKEN")
+    if STATE["index"] in RIDDLES:
+        riddle = RIDDLES[STATE["index"]]
+        await query.message.
+reply_text("🧩 Небольшая загадка!")
+        await query.message.reply_text(riddle["text"])
+        if "image" in riddle:
+            with open(riddle["image"], "rb") as f:
+                await query.message.reply_photo(f)
+        if "video" in riddle:
+            with open(riddle["video"], "rb") as f:
+                await query.message.reply_video(f)
 
-    app = ApplicationBuilder().token(TOKEN).build()
+    if STATE["index"] < len(QUESTIONS):
+        q = QUESTIONS[STATE["index"]]
+        await query.message.reply_text(q["question"], reply_markup=get_keyboard(STATE["index"]))
+    else:
+        await query.message.reply_text("🎉 Это были все вопросы. Спасибо, что прошла этот путь со мной ❤️")
+
+if name == "__main__":
+    app = ApplicationBuilder().token("YOUR_TOKEN_HERE").build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(handle_button))
-
+    app.add_handler(CallbackQueryHandler(handle_answer))
     app.run_polling()
-
-if __name__ == "__main__":
-    main()

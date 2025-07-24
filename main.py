@@ -114,8 +114,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if STATE["index"] in RIDDLES:
         riddle = RIDDLES[STATE["index"]]
-        await query.message.
-reply_text("🧩 Небольшая загадка!")
+        await query.message.reply_text("🧩 Небольшая загадка!")
         await query.message.reply_text(riddle["text"])
         if "image" in riddle:
             with open(riddle["image"], "rb") as f:

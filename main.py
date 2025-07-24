@@ -129,7 +129,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await query.message.reply_text("🎉 Это были все вопросы. Спасибо, что прошла этот путь со мной ❤️")
 
-if name == "__main__":
+if __name__ == "__main__":
     app = ApplicationBuilder().token("YOUR_TOKEN_HERE").build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(handle_answer))

@@ -99,8 +99,7 @@ async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif user_state[user_id]["index"] < len(QUESTIONS):
         await send_question(query, context, user_id)
     else:
-        await query.message.reply_text("💖 Это было потрясающе! Ты прошла все вопросы.
-Дальше будет ещё интереснее!")
+        await query.message.reply_text("💖 Это было потрясающе! Ты прошла все вопросы. Дальше будет ещё интереснее!")
 
 async def send_question(query, context, user_id):
     index = user_state[user_id]["index"]

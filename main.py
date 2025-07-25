@@ -98,7 +98,7 @@ async def handle_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if chosen == correct:
                 reply = "🌟 Угадала!"
             else:
-reply = f"😔 Почти… Это была: {correct}"
+                reply = f"😔 Почти… Это была: {correct}"
             await query.edit_message_reply_markup(reply_markup=None)
             await query.message.reply_text(reply)
 

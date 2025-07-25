@@ -129,7 +129,7 @@ async def send_question(update: Update, context: ContextTypes.DEFAULT_TYPE, user
         keyboard = [[InlineKeyboardButton(opt, callback_data=f"answer:{opt}")] for opt in puzzle["options"]]
         await context.bot.send_message(chat_id=user_id, text=f"🧩 {puzzle['question']}", reply_markup=InlineKeyboardMarkup(keyboard))
 
-if name == "__main__":
+if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(handle_query))

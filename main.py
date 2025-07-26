@@ -2,7 +2,7 @@ import logging
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, InputMediaPhoto, InputMediaVideo
 from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandler, ContextTypes
 
-TOKEN = "YOUR_TOKEN_HERE"
+TOKEN = "8222070472:AAHHZEU9SJISEMmmXvvCMHeUSPXcZy_JhO0"
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
